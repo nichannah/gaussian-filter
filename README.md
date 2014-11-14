@@ -1,2 +1,2 @@
 
-Gaussing blur in Fortran and Python. Handles masked input. 
+Gaussing filter/blur in Fortran and Python. Handles masked input. 
