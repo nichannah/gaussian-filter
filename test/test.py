@@ -79,8 +79,9 @@ def convolve(input, weights):
     # The central array should be unchanged. 
     assert(np.array_equal(input_copy, input[rows:2*rows, cols:2*cols]))
 
-    # All sides of the middle array should be the same as those bordering them. 
-    # Check this starting at the top and going around clockwise. 
+    # All sides of the middle array should be the same as those bordering them.
+    # Check this starting at the top and going around clockwise. This can be
+    # visually checked by plotting the 'input' array.
     assert(np.array_equal(input_copy[0, :], input[rows-1, cols:2*cols]))
     assert(np.array_equal(input_copy[:, -1], input[rows:2*rows, 2*cols]))
     assert(np.array_equal(input_copy[-1, :], input[2*rows, cols:2*cols]))
