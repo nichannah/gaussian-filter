@@ -285,3 +285,38 @@ class TestFilter():
         mask = np.ones_like(input, dtype='bool')
         result = convolve(input, gaussian_kernel(1), mask)
         assert(np.array_equal(input, result))
+
+
+    def test_realistic_with_mask(self):
+        """
+        Test a realistic field and mask. 
+        """
+
+        with nc.Dataset(os.path.join(self.my_dir, 'taux.nc')) as f:
+            taux_in = f.variables['taux'][0, :]
+
+        mask = np.zeros_like(taux_in, dtype='bool')
+        mask[np.where(taux_in == 0)] = True
+
+        taux = ndimage.gaussian_filter(taux_in, sigma=3)
+        # To do a realistic comparison we need to mask out land points. 
+        taux = taux * np.logical_not(mask)
+
+        # A lower truncation leads to a smaller kernel and hence less guessing
+        # in the case of a masked input. This gives a better result for masked
+        # inputs. 
+        k = gaussian_kernel(4, truncate=1)
+        my_taux = convolve(taux_in, k, mask)
+
+        import pdb
+        pdb.set_trace()
+
+
+    def test_tuning_script(self):
+        """
+        The tuning script will take an example field in and produce a series of
+        plots to help the user decide on a good configuration. 
+        """
+
+        pass
+        
