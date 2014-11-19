@@ -38,30 +38,16 @@ def gaussian_kernel(sigma, truncate=4.0):
     return k
 
 
-def convolve(input, weights, mask=None, slow=False):
+def tile_and_reflect(input):
     """
-    2 dimensional convolution.
-
-    This is a Python implementation of what will be written in Fortran. 
-    
-    Borders are handled with reflection. Only one reflection is done on each
-    side so the weights array cannot be bigger than width/height of input +1.
+    Make 3x3 tiled array. Central area is 'input', surrounding areas are
+    reflected.
     """
 
-    assert(len(input.shape) == 2)
-    assert(len(weights.shape) == 2)
-    assert(weights.shape[0] < input.shape[0] + 1)
-    assert(weights.shape[1] < input.shape[1] + 1)
+    tiled_input = np.tile(input, (3, 3))
 
     rows = input.shape[0]
     cols = input.shape[1]
-    # Stands for half weights row. 
-    hw_row = weights.shape[0] / 2
-    hw_col = weights.shape[1] / 2
-
-    input_copy = np.copy(input)
-    tiled_input = np.tile(input, (3, 3))
-    output = np.empty_like(input) * np.nan
 
     # Now we have a 3x3 tiles - do the reflections. 
     # All those on the sides need to be flipped left-to-right. 
@@ -83,21 +69,67 @@ def convolve(input, weights, mask=None, slow=False):
             np.flipud(tiled_input[-rows:, i*cols:(i + 1)*cols])
 
     # The central array should be unchanged. 
-    assert(np.array_equal(input_copy, tiled_input[rows:2*rows, cols:2*cols]))
+    assert(np.array_equal(input, tiled_input[rows:2*rows, cols:2*cols]))
 
     # All sides of the middle array should be the same as those bordering them.
     # Check this starting at the top and going around clockwise. This can be
     # visually checked by plotting the 'tiled_input' array.
-    assert(np.array_equal(input_copy[0, :], tiled_input[rows-1, cols:2*cols]))
-    assert(np.array_equal(input_copy[:, -1], tiled_input[rows:2*rows, 2*cols]))
-    assert(np.array_equal(input_copy[-1, :], tiled_input[2*rows, cols:2*cols]))
-    assert(np.array_equal(input_copy[:, 0], tiled_input[rows:2*rows, cols-1]))
+    assert(np.array_equal(input[0, :], tiled_input[rows-1, cols:2*cols]))
+    assert(np.array_equal(input[:, -1], tiled_input[rows:2*rows, 2*cols]))
+    assert(np.array_equal(input[-1, :], tiled_input[2*rows, cols:2*cols]))
+    assert(np.array_equal(input[:, 0], tiled_input[rows:2*rows, cols-1]))
+
+    return tiled_input
+
+
+def convolve(input, weights, mask=None, slow=False):
+    """
+    2 dimensional convolution.
+
+    This is a Python implementation of what will be written in Fortran. 
+    
+    Borders are handled with reflection.
+
+    Masking is supported in the following way: 
+        * Masked points are skipped. 
+        * Parts of the input which are masked have weight 0 in the kernel. 
+        * Since the kernel as a whole needs to have value 1, the weights of the
+          masked parts of the kernel are evenly distributed over the non-masked
+          parts. 
+    """
+
+    assert(len(input.shape) == 2)
+    assert(len(weights.shape) == 2)
+
+    # Only one reflection is done on each side so the weights array cannot be
+    # bigger than width/height of input +1.
+    assert(weights.shape[0] < input.shape[0] + 1)
+    assert(weights.shape[1] < input.shape[1] + 1)
+
+    if mask is not None: 
+        # The slow convolve does not support masking. 
+        assert(not slow)
+        assert(input.shape == mask.shape)
+        tiled_mask = tile_and_reflect(mask)
+
+    output = np.copy(input)
+    tiled_input = tile_and_reflect(input)
+
+    rows = input.shape[0]
+    cols = input.shape[1]
+    # Stands for half weights row. 
+    hw_row = weights.shape[0] / 2
+    hw_col = weights.shape[1] / 2
 
     # Now do convolution on central array.
     # Iterate over tiled_input. 
     for i, io in zip(range(rows, rows*2), range(rows)):
         for j, jo in zip(range(cols, cols*2), range(cols)):
             # The current central pixel is at (i, j)
+
+            # Skip masked points. 
+            if mask is not None and tiled_mask[i, j]:
+                continue
             
             average = 0.0
             if slow:
@@ -117,13 +149,43 @@ def convolve(input, weights, mask=None, slow=False):
                 overlapping = tiled_input[i - hw_row:i + hw_row + 1,
                                           j - hw_col:j + hw_col + 1]
                 assert(overlapping.shape == weights.shape)
-                merged = weights[:] * overlapping
+                
+                # If any of 'overlapping' is masked then set the corrosponding
+                # points in the weights matrix to 0 and redistribute these to
+                # non-masked points. 
+                if mask is not None:
+                    overlapping_mask = tiled_mask[i - hw_row:i + hw_row + 1,
+                                                  j - hw_col:j + hw_col + 1]
+                    assert(overlapping_mask.shape == weights.shape)
+
+                    # Total value and number of weights clobbered by the mask. 
+                    clobber_total = np.sum(weights[overlapping_mask])
+                    remaining_num = np.sum(np.logical_not(overlapping_mask))
+                    # This is impossible since at least i, j is not masked. 
+                    assert(remaining_num > 0)
+                    correction = clobber_total / remaining_num
+
+                    # It is OK if nothing is masked - the weights will not be changed.  
+                    if correction == 0:
+                        assert(not overlapping_mask.any())
+
+                    # Redistribute to non-masked points. 
+                    tmp_weights = np.copy(weights)
+                    tmp_weights[overlapping_mask] = 0.0
+                    tmp_weights[np.where(tmp_weights != 0)] += correction
+
+                    # Should be very close to 1. May not be exact due to rounding.
+                    assert(abs(np.sum(tmp_weights) - 1) < 1e-15)
+
+                else:
+                    tmp_weights = weights
+                    
+                merged = tmp_weights[:] * overlapping
                 average = np.sum(merged)
 
             # Set new output value. 
             output[io, jo] = average
 
-    assert(not np.isnan(np.sum(output)))
     return output
 
 
@@ -185,7 +247,7 @@ class TestFilter():
         assert((abs(my_output - output) < 1e-15).all())
 
 
-    def test_gaussian_filter_no_mask(self):
+    def test_filter_without_mask(self):
         """
         Run the Gaussian filter without a mask and compare to python solution. 
         """
@@ -198,7 +260,28 @@ class TestFilter():
 
         assert((abs(taux - my_taux) < 1e-6).all())
         assert(abs(1 - np.sum(taux) / np.sum(my_taux)) < 1e-4)
-        assert(abs((1 - np.sum(taux_in) / np.sum(my_taux)) < 1e-4)
+        assert(abs(1 - np.sum(taux_in) / np.sum(my_taux)) < 1e-4)
 
 
-    
+    def test_filter_with_mask(self):
+        """
+        Some basic tests with masking. 
+        """
+
+        input = np.random.random(size=(100, 100))
+        mask = np.zeros_like(input, dtype='bool')
+        mask[0::2, :] = True
+
+        # Lots of mask. 
+        result = convolve(input, gaussian_kernel(1), mask)
+        assert(abs(1 - np.sum(result) / np.sum(input)) < 1e-3)
+
+        # No mask. 
+        mask = np.zeros_like(input, dtype='bool')
+        result = convolve(input, gaussian_kernel(1), mask)
+        assert(abs(1 - np.sum(result) / np.sum(input)) < 1e-12)
+
+        # All mask - does nothing. 
+        mask = np.ones_like(input, dtype='bool')
+        result = convolve(input, gaussian_kernel(1), mask)
+        assert(np.array_equal(input, result))
