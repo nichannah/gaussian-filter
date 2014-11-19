@@ -21,7 +21,7 @@ The plan:
 
 """
 
-def guassian_kernel(sigma, truncate=4.0):
+def gaussian_kernel(sigma, truncate=4.0):
     """
     Return Gaussian that truncates at the given number of standard deviations. 
     """
@@ -140,17 +140,17 @@ class TestFilter():
         a = np.zeros((9, 9))
         a[4][4] = 1
         k = ndimage.gaussian_filter(a, sigma=1)
-        my_k = guassian_kernel(1)
-        assert(np.max(abs(my_k - k)) < 1e-16)
+        my_k = gaussian_kernel(1)
+        assert((abs(my_k - k) < 1e-16).all())
 
         # Also check with a convolution. 
         with nc.Dataset(os.path.join(self.my_dir, 'taux.nc')) as f:
             taux_in = f.variables['taux'][0, :]
         
         taux = ndimage.gaussian_filter(taux_in, sigma=3)
-        my_taux = ndimage.convolve(taux_in, guassian_kernel(3))
+        my_taux = ndimage.convolve(taux_in, gaussian_kernel(3))
         assert(np.sum(taux) == np.sum(my_taux))
-        assert(np.max(abs(taux - my_taux)) < 1e-6)
+        assert((abs(taux - my_taux) < 1e-6).all())
 
 
     def test_convolve_looping(self):
@@ -159,7 +159,7 @@ class TestFilter():
         are identical. 
         """
 
-        k = guassian_kernel(3)
+        k = gaussian_kernel(3)
         input = np.random.randint(10, size=(50, 50))
 
         slow_output = convolve(input, k, slow=True)
@@ -176,8 +176,8 @@ class TestFilter():
         Compare to ndimage.convolve. 
         """
 
-        input = np.random.random(size=(9, 9))
-        k = guassian_kernel(1)
+        input = np.random.random(size=(100, 100))
+        k = gaussian_kernel(1)
 
         my_output = convolve(input, k)
         output = ndimage.convolve(input, k)
@@ -185,24 +185,20 @@ class TestFilter():
         assert((abs(my_output - output) < 1e-15).all())
 
 
-    def test_gaussian_no_mask(self):
+    def test_gaussian_filter_no_mask(self):
         """
         Run the Gaussian filter without a mask and compare to python solution. 
         """
 
-        # Copy input to output. 
-        input = os.path.join(self.my_dir, 'tauy.nc')
-        output = os.path.join(self.my_dir, 'tauy_gaussian.nc')
+        with nc.Dataset(os.path.join(self.my_dir, 'taux.nc')) as f:
+            taux_in = f.variables['taux'][0, :]
 
-        shutil.copy(input, output)
+        taux = ndimage.gaussian_filter(taux_in, sigma=3)
+        my_taux = convolve(taux_in, gaussian_kernel(3))
 
-        with nc.Dataset(input) as f:
-            tauy_in = f.variables['tauy'][0, :]
+        assert((abs(taux - my_taux) < 1e-6).all())
+        assert(abs(1 - np.sum(taux) / np.sum(my_taux)) < 1e-4)
+        assert(abs((1 - np.sum(taux_in) / np.sum(my_taux)) < 1e-4)
 
-        tauy_out = ndimage.gaussian_filter(tauy_in, sigma=3)
 
-        import pdb
-        pdb.set_trace()
-
-        with nc.Dataset(output, 'r+') as f:
-            f.variables['tauy'][0, :] = tauy_out
+    
