@@ -9,6 +9,7 @@ private
 
 public gaussian_kernel
 public convolve
+public assert
 
 contains 
 
@@ -22,28 +23,30 @@ subroutine gaussian_kernel(sigma, kernel, truncate)
 
     real, dimension(:,:), allocatable :: x, y
     integer :: radius, trunc, i, j
+    real :: s
 
     if (present(truncate)) then
         trunc = truncate        
     else
-        trunc = 2.0
+        trunc = 4.0
     endif
 
     radius = int(trunc * sigma + 0.5)
+    s = sigma**2
 
     ! Set up meshgrid. 
-    allocate(x(-radius:radius+1, -radius:radius+1))
-    allocate(y(-radius:radius+1, -radius:radius+1))
-    do j = -radius, radius+1 
-        do i = -radius, radius+1 
+    allocate(x(-radius:radius, -radius:radius))
+    allocate(y(-radius:radius, -radius:radius))
+    do j = -radius, radius
+        do i = -radius, radius 
             x(i, j) = i
             y(i, j) = j
         enddo
     enddo
 
     ! Make kernel. 
-    allocate(kernel(-radius:radius+1, -radius:radius+1))
-    kernel = 2.0*exp(-0.5 * (x**2 + y**2) / sigma)
+    allocate(kernel(-radius:radius, -radius:radius))
+    kernel = 2.0*exp(-0.5 * (x**2 + y**2) / s)
     kernel = kernel / sum(kernel)
 
     deallocate(x)
@@ -109,6 +112,8 @@ subroutine convolve(input, weights, output, mask)
         enddo
     enddo
 
+    deallocate(tiled_input)
+
 end subroutine convolve
 
 subroutine assert(statement, msg)
@@ -118,19 +123,9 @@ subroutine assert(statement, msg)
 
     if (.not. statement) then 
         write(error_unit, *) msg        
-        stop 'Assert triggered see stderr.'
+        stop 'Assert triggered, see stderr.'
     endif 
 
 end subroutine assert
 
 end module gaussian_filter
-
-!program test
-!
-!    use gaussian_filter, only: gaussian_kernel, convolve
-!
-!    real, dimension(:,:), allocatable :: kernel
-!
-!    call gaussian_kernel(3.0, kernel) 
-!    
-!end program test
