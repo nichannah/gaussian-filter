@@ -32,7 +32,7 @@ def gaussian_kernel(sigma, truncate=4.0):
     x, y = np.mgrid[-radius:radius+1, -radius:radius+1]
     sigma = sigma**2
 
-    k = (1.0 / (2.0*np.pi*sigma))*np.exp(-0.5 * (x**2 + y**2) / sigma)
+    k = 2*np.exp(-0.5 * (x**2 + y**2) / sigma)
     k = k / np.sum(k)
 
     return k
@@ -306,10 +306,8 @@ class TestFilter():
         # in the case of a masked input. This gives a better result for masked
         # inputs. 
         k = gaussian_kernel(4, truncate=1)
-        my_taux = convolve(taux_in, k, mask)
 
-        import pdb
-        pdb.set_trace()
+        my_taux = convolve(taux_in, k, mask)
 
 
     def test_tuning_script(self):
