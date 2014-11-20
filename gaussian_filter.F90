@@ -55,12 +55,12 @@ end subroutine gaussian_kernel
 subroutine convolve(input, weights, output, mask)
 
     real, intent(in), dimension(:,:) :: input, weights
-    real, intent(in), dimension(:,:) optional :: mask
+    real, intent(in), dimension(:,:), optional :: mask
     real, intent(inout), dimension(:,:) :: output
 
     real, dimension(:, :), allocatable :: tiled_input
 
-    integer :: rows, cols, hw_row, hw_col
+    integer :: rows, cols, hw_row, hw_col, i, j
 
     ! First step is to tile the input.
     rows = ubound(input, 1)
@@ -102,10 +102,10 @@ subroutine convolve(input, weights, output, mask)
     do j = cols+1, 2*cols 
         do i = rows+1, 2*rows 
             ! Find the part of the tiled_input array that overlaps with the
-            ! weights array.
-            average = weights(:,:) * tiled_input(i - hw_row:i + hw_row + 1, &
-                                                 j - hw_row:j + hw_row + 1)
-            output(i, j) = sum(average)
+            ! weights array, multiply with weights and sum up. 
+            output(i, j) = sum(weights(:,:) * &
+                               tiled_input(i - hw_row:i + hw_row, &
+                                           j - hw_col:j + hw_col))
         enddo
     enddo
 
@@ -117,8 +117,8 @@ subroutine assert(statement, msg)
     character(len=*), intent(in) :: msg
 
     if (.not. statement) then 
-        write(*, error_unit) msg        
-        stop 'Assert triggered see stderr'
+        write(error_unit, *) msg        
+        stop 'Assert triggered see stderr.'
     endif 
 
 end subroutine assert
@@ -134,4 +134,3 @@ program test
     call gaussian_kernel(3.0, kernel) 
     
 end program test
-

@@ -1,0 +1,177 @@
+
+from __future__ import print_function
+
+import netCDF4 as nc
+import numpy as np
+import scipy.ndimage as ndimage
+from scipy import signal
+import os
+import subprocess as sp
+
+from gaussian_filter import gaussian_kernel, convolve
+
+"""
+The plan:
+
+- write separate routines in Python for creating the kernel and doing the
+  convolution. Compare these to the output from the libraries. 
+- write equivalent routines in Fortran. Run and compare to above. 
+
+- results from Python libraries, Python implementation and Fortran
+  implementation are all compared. 
+"""
+
+def call_make():
+    return sp.call(['make'])
+
+
+class TestFortranFilter():
+    """
+    Test Fortran implementation. 
+
+    Comparisons are made with the Python implementation. 
+    """
+
+    def test_build(self):
+        """
+        Test building the Fortran module. 
+        """
+
+        ret = call_make()
+        assert(ret == 0)
+
+
+class TestPythonFilter():
+    """
+    Test Python implementation.
+    
+    Comparisons with the Scipy packages are made. 
+    """
+
+    def __init__(self):
+        self.my_dir = os.path.dirname(os.path.realpath(__file__))
+        self.data_dir = os.path.join(self.my_dir, 'test_data')
+
+    def test_kernel(self):
+        """
+        Test that kernel is correct. Compare to one created by ndimage.
+        """
+
+        a = np.zeros((9, 9))
+        a[4][4] = 1
+        k = ndimage.gaussian_filter(a, sigma=1)
+        my_k = gaussian_kernel(1)
+        assert((abs(my_k - k) < 1e-16).all())
+
+        # Also check with a convolution. 
+        with nc.Dataset(os.path.join(self.data_dir, 'taux.nc')) as f:
+            taux_in = f.variables['taux'][0, :]
+        
+        taux = ndimage.gaussian_filter(taux_in, sigma=3)
+        my_taux = ndimage.convolve(taux_in, gaussian_kernel(3))
+        assert(np.sum(taux) == np.sum(my_taux))
+        assert((abs(taux - my_taux) < 1e-6).all())
+
+
+    def test_convolve_looping(self):
+        """
+        Test the slow and fast convolution implementations - ensure that they
+        are identical. 
+        """
+
+        k = gaussian_kernel(3)
+        input = np.random.randint(10, size=(50, 50))
+
+        slow_output = convolve(input, k, slow=True)
+        fast_output = convolve(input, k)
+
+        # There may be some tiny rounding differences. 
+        assert((abs(fast_output - slow_output) < 1e-13).all())
+
+
+    def test_convolve(self):
+        """
+        Test that convolution routine is correct.
+
+        Compare to ndimage.convolve. 
+        """
+
+        input = np.random.random(size=(100, 100))
+        k = gaussian_kernel(1)
+
+        my_output = convolve(input, k)
+        output = ndimage.convolve(input, k)
+
+        assert((abs(my_output - output) < 1e-15).all())
+
+
+    def test_filter_without_mask(self):
+        """
+        Run the Gaussian filter without a mask and compare to python solution. 
+        """
+
+        with nc.Dataset(os.path.join(self.data_dir, 'taux.nc')) as f:
+            taux_in = f.variables['taux'][0, :]
+
+        taux = ndimage.gaussian_filter(taux_in, sigma=3)
+        my_taux = convolve(taux_in, gaussian_kernel(3))
+
+        assert((abs(taux - my_taux) < 1e-6).all())
+        assert(abs(1 - np.sum(taux) / np.sum(my_taux)) < 1e-4)
+        assert(abs(1 - np.sum(taux_in) / np.sum(my_taux)) < 1e-4)
+
+
+    def test_filter_with_mask(self):
+        """
+        Some basic tests with masking. 
+        """
+
+        input = np.random.random(size=(100, 100))
+        mask = np.zeros_like(input, dtype='bool')
+        mask[0::2, :] = True
+
+        # Lots of mask. 
+        result = convolve(input, gaussian_kernel(1), mask)
+        assert(abs(1 - np.sum(result) / np.sum(input)) < 1e-3)
+
+        # No mask. 
+        mask = np.zeros_like(input, dtype='bool')
+        result = convolve(input, gaussian_kernel(1), mask)
+        assert(abs(1 - np.sum(result) / np.sum(input)) < 1e-12)
+
+        # All mask - does nothing. 
+        mask = np.ones_like(input, dtype='bool')
+        result = convolve(input, gaussian_kernel(1), mask)
+        assert(np.array_equal(input, result))
+
+
+    def test_realistic_with_mask(self):
+        """
+        Test a realistic field and mask. 
+        """
+
+        with nc.Dataset(os.path.join(self.data_dir, 'taux.nc')) as f:
+            taux_in = f.variables['taux'][0, :]
+
+        mask = np.zeros_like(taux_in, dtype='bool')
+        mask[np.where(taux_in == 0)] = True
+
+        taux = ndimage.gaussian_filter(taux_in, sigma=3)
+        # To do a realistic comparison we need to mask out land points. 
+        taux = taux * np.logical_not(mask)
+
+        # A lower truncation leads to a smaller kernel and hence less guessing
+        # in the case of a masked input. This gives a better result for masked
+        # inputs. 
+        k = gaussian_kernel(4, truncate=1)
+
+        my_taux = convolve(taux_in, k, mask)
+
+
+    def test_tuning_script(self):
+        """
+        The tuning script will take an example field in and produce a series of
+        plots to help the user decide on a good configuration. 
+        """
+
+        pass
