@@ -16,7 +16,6 @@ The plan:
 - write separate routines in Python for creating the kernel and doing the
   convolution. Compare these to the output from the libraries. 
 - write equivalent routines in Fortran. Run and compare to above. 
-
 - results from Python libraries, Python implementation and Fortran
   implementation are all compared. 
 """
@@ -39,6 +38,11 @@ class TestFortranFilter():
 
         ret = call_make()
         assert(ret == 0)
+
+    def test_f2py(self):
+        """
+        Test that f2py runs. 
+        """
 
 
 class TestPythonFilter():

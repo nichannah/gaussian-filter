@@ -125,12 +125,12 @@ end subroutine assert
 
 end module gaussian_filter
 
-program test
-
-    use gaussian_filter, only: gaussian_kernel, convolve
-
-    real, dimension(:,:), allocatable :: kernel
-
-    call gaussian_kernel(3.0, kernel) 
-    
-end program test
+!program test
+!
+!    use gaussian_filter, only: gaussian_kernel, convolve
+!
+!    real, dimension(:,:), allocatable :: kernel
+!
+!    call gaussian_kernel(3.0, kernel) 
+!    
+!end program test
