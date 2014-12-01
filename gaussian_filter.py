@@ -110,7 +110,7 @@ def convolve(input, weights, mask=None, slow=False):
             # Skip masked points. 
             if mask is not None and tiled_mask[i, j]:
                 continue
-            
+
             average = 0.0
             if slow:
                 # Iterate over weights/kernel. 
@@ -129,7 +129,7 @@ def convolve(input, weights, mask=None, slow=False):
                 overlapping = tiled_input[i - hw_row:i + hw_row + 1,
                                           j - hw_col:j + hw_col + 1]
                 assert(overlapping.shape == weights.shape)
-                
+
                 # If any of 'overlapping' is masked then set the corrosponding
                 # points in the weights matrix to 0 and redistribute these to
                 # non-masked points. 
@@ -159,11 +159,11 @@ def convolve(input, weights, mask=None, slow=False):
 
                 else:
                     tmp_weights = weights
-                    
+
                 merged = tmp_weights[:] * overlapping
                 average = np.sum(merged)
 
-            # Set new output value. 
+            # Set new output value.
             output[io, jo] = average
 
     return output

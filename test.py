@@ -8,48 +8,142 @@ from scipy import signal
 import os
 import subprocess as sp
 
-from gaussian_filter import gaussian_kernel, convolve
+from gaussian_filter import gaussian_kernel, convolve, tile_and_reflect
 
 """
 The plan:
 
 - write separate routines in Python for creating the kernel and doing the
-  convolution. Compare these to the output from the libraries. 
-- write equivalent routines in Fortran. Run and compare to above. 
+  convolution. Compare these to the output from the libraries.
+- write equivalent routines in Fortran. Run and compare to above.
 - results from Python libraries, Python implementation and Fortran
-  implementation are all compared. 
+  implementation are all compared.
 """
 
 def call_make():
     return sp.call(['make'])
 
 
+def call_f2py():
+
+    ret = 0
+    cmd = ['f2py', 'test_interface.F90', '-m', 'test_interface', '-h',
+           'test_interface.pyf', '--overwrite-signature']
+    ret += sp.call(cmd)
+
+    cmd = ['f2py', '--f90flags=-fdefault-real-8', '-c', 'test_interface.pyf',
+           'gaussian_filter.F90', 'test_interface.F90']
+    ret += sp.call(cmd)
+
+    return ret
+
+
+def load_fortran_test_interface():
+
+    try:
+        import test_interface as ti
+    except ImportError:
+        ret = call_f2py()
+        assert(ret == 0)
+        import test_interface as ti
+
+    return ti.test_interface
+
+
+def run_fortran_gaussian_filter(sigma, truncate, kx, ky, input):
+
+    ti = load_fortran_test_interface()
+    k, o = ti.run_gaussian_filter(sigma=1.0, truncate=4.0, kx=9, ky=9,
+                                  input=input)
+    return k, o
+
+
+def run_fortran_tile_and_reflect(input):
+
+    ti = load_fortran_test_interface()
+    output = ti.run_tile_and_reflect(input=input)
+    return output
+
+
 class TestFortranFilter():
     """
-    Test Fortran implementation. 
+    Test Fortran implementation.
 
-    Comparisons are made with the Python implementation. 
+    Comparisons are made with the Python implementation.
     """
+
+    def __init__(self):
+        self.my_dir = os.path.dirname(os.path.realpath(__file__))
+        self.data_dir = os.path.join(self.my_dir, 'test_data')
 
     def test_build(self):
         """
-        Test building the Fortran module. 
+        Test building the Fortran module.
         """
 
         ret = call_make()
         assert(ret == 0)
 
+
     def test_f2py(self):
         """
-        Test that f2py runs. 
+        Test building the f2py interface.
         """
+
+        ret = call_f2py()
+        assert(ret == 0)
+
+
+    def test_kernel(self):
+        """
+        Test that the kernel is correct.
+
+        Compare to the Python implementation.
+        """
+
+        k_p = gaussian_kernel(1.0, 4.0)
+        kx, ky = k_p.shape
+        k_f, _ = run_fortran_gaussian_filter(1.0, 4.0, kx, ky,
+                                             np.ones((kx, ky)))
+
+        assert((abs(k_p - k_f) < 1e-16).all())
+
+
+    def test_tile_and_reflect(self):
+        """
+        Test that Python and Fortran code are doing the tiling in the same way.
+        """
+
+        with nc.Dataset(os.path.join(self.data_dir, 'mask.nc')) as f:
+            input = f.variables['mask'][:]
+
+        output_f = run_fortran_tile_and_reflect(input)
+        output_p = tile_and_reflect(input)
+
+        assert(np.array_equal(output_f, output_p))
+
+
+    def test_convolve(self):
+        """
+        Test that convolution routine is correct.
+
+        Compare to Python implementation.
+        """
+
+        k_p = gaussian_kernel(1.0, 4.0)
+        kx, ky = k_p.shape
+        input = np.random.random(size=(100, 100))
+        _, output_f = run_fortran_gaussian_filter(1.0, 4.0, kx, ky, input)
+        output_p = convolve(input, k_p)
+
+        assert((abs(output_p - output_f) < 1e-15).all())
 
 
 class TestPythonFilter():
     """
     Test Python implementation.
-    
-    Comparisons with the Scipy packages are made. 
+
+    Comparisons with the Scipy packages are made.
     """
 
     def __init__(self):
@@ -67,10 +161,10 @@ class TestPythonFilter():
         my_k = gaussian_kernel(1)
         assert((abs(my_k - k) < 1e-16).all())
 
-        # Also check with a convolution. 
+        # Also check with a convolution.
         with nc.Dataset(os.path.join(self.data_dir, 'taux.nc')) as f:
             taux_in = f.variables['taux'][0, :]
-        
+
         taux = ndimage.gaussian_filter(taux_in, sigma=3)
         my_taux = ndimage.convolve(taux_in, gaussian_kernel(3))
         assert(np.sum(taux) == np.sum(my_taux))
@@ -80,7 +174,7 @@ class TestPythonFilter():
     def test_convolve_looping(self):
         """
         Test the slow and fast convolution implementations - ensure that they
-        are identical. 
+        are identical.
         """
 
         k = gaussian_kernel(3)
@@ -97,7 +191,7 @@ class TestPythonFilter():
         """
         Test that convolution routine is correct.
 
-        Compare to ndimage.convolve. 
+        Compare to ndimage.convolve.
         """
 
         input = np.random.random(size=(100, 100))
