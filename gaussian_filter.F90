@@ -12,10 +12,10 @@ public convolve
 public assert
 public tile_and_reflect
 
-contains 
+contains
 
 ! This is a copy of code found in test/test.py. These two
-! implementations must remain equivalent for tests to pass. 
+! implementations must remain equivalent for tests to pass.
 subroutine gaussian_kernel(sigma, kernel, truncate)
 
     real, intent(in) :: sigma
@@ -55,7 +55,7 @@ subroutine gaussian_kernel(sigma, kernel, truncate)
 
 end subroutine gaussian_kernel
 
-! Set up 3x3 tiles around the input. 
+! Set up 3x3 tiles around the input.
 subroutine tile_and_reflect(input, output)
 
     real, intent(in), dimension(:,:) :: input
@@ -91,7 +91,7 @@ subroutine tile_and_reflect(input, output)
 
 end subroutine tile_and_reflect
 
-! Convolution. First implement without mask. 
+! Convolution. First implement without mask.
 subroutine convolve(input, weights, output, mask)
 
     real, intent(in), dimension(:,:) :: input, weights
@@ -105,7 +105,7 @@ subroutine convolve(input, weights, output, mask)
     ! First step is to tile the input.
     rows = ubound(input, 1)
     cols = ubound(input, 2)
-    ! Stands for half weights row. 
+    ! Stands for half weights row.
     hw_row = ubound(weights, 1) / 2
     hw_col = ubound(weights, 2) / 2
 
@@ -118,14 +118,14 @@ subroutine convolve(input, weights, output, mask)
 
     call tile_and_reflect(input, tiled_input)
 
-    do j = 1, cols 
+    do j = 1, cols
         do i = 1, rows
-            ! Use i, j to offset into equivalent part of the tiled_input. 
+            ! Use i, j to offset into equivalent part of the tiled_input.
             tj = j + cols
             ti = i + rows
 
             ! Find the part of the tiled_input array that overlaps with the
-            ! weights array, multiply with weights and sum up. 
+            ! weights array, multiply with weights and sum up.
             output(i, j) = sum(weights(:,:) * &
                                tiled_input(ti - hw_row:ti + hw_row, &
                                            tj - hw_col:tj + hw_col))
@@ -139,10 +139,10 @@ subroutine assert(statement, msg)
     logical, intent(in) :: statement
     character(len=*), intent(in) :: msg
 
-    if (.not. statement) then 
-        write(error_unit, *) msg        
+    if (.not. statement) then
+        write(error_unit, *) msg
         stop 'Assert triggered, see stderr.'
-    endif 
+    endif
 
 end subroutine assert
 
