@@ -21,6 +21,7 @@ How to Run the tests
 
 > nosetests -s
 
+Tests are run periodically at: https://climate-cms.nci.org.au/jenkins/job/nah599/job/gaussian-filter/
 
 How to Use
 -----------

@@ -124,8 +124,7 @@ class TestFortranFilter():
         Test that Python and Fortran code are doing the tiling in the same way.
         """
 
-        with nc.Dataset(os.path.join(self.data_dir, 'mask.nc')) as f:
-            input = f.variables['mask'][:]
+        input = np.random.random(size=(100, 100))
 
         output_f = run_fortran_tile_and_reflect(input)
         output_p = tile_and_reflect(input)
