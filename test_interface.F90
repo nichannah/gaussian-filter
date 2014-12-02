@@ -15,7 +15,7 @@ public run_gaussian_filter, run_tile_and_reflect
 contains
 
 subroutine run_gaussian_filter(sigma, truncate, kx, ky, kernel, &
-                               nx, ny, input, output)
+                               nx, ny, input, output, mask)
 
     real(kind=8), intent(in) :: sigma, truncate
     ! Indices and output for kernel
@@ -25,6 +25,7 @@ subroutine run_gaussian_filter(sigma, truncate, kx, ky, kernel, &
     ! Indices and data input/output
     integer, intent(in) :: nx, ny
     real(kind=8), intent(in), dimension(nx, ny) :: input
+    real(kind=8), intent(in), dimension(nx, ny), optional :: mask
     real(kind=8), intent(out), dimension(nx, ny) :: output
 
     ! Get the kernel first.
@@ -36,7 +37,11 @@ subroutine run_gaussian_filter(sigma, truncate, kx, ky, kernel, &
 
     kernel(:, :) = k(:, :)
 
-    call convolve(input, kernel, output)
+    if (present(mask)) then
+        call convolve(input, kernel, output, mask)
+    else
+        call convolve(input, kernel, output)
+    endif
 
 end subroutine run_gaussian_filter
 

@@ -107,7 +107,7 @@ def convolve(input, weights, mask=None, slow=False):
         for j, jo in zip(range(cols, cols*2), range(cols)):
             # The current central pixel is at (i, j)
 
-            # Skip masked points. 
+            # Skip masked points.
             if mask is not None and tiled_mask[i, j]:
                 continue
 
@@ -132,24 +132,24 @@ def convolve(input, weights, mask=None, slow=False):
 
                 # If any of 'overlapping' is masked then set the corrosponding
                 # points in the weights matrix to 0 and redistribute these to
-                # non-masked points. 
+                # non-masked points.
                 if mask is not None:
                     overlapping_mask = tiled_mask[i - hw_row:i + hw_row + 1,
                                                   j - hw_col:j + hw_col + 1]
                     assert(overlapping_mask.shape == weights.shape)
 
-                    # Total value and number of weights clobbered by the mask. 
+                    # Total value and number of weights clobbered by the mask.
                     clobber_total = np.sum(weights[overlapping_mask])
                     remaining_num = np.sum(np.logical_not(overlapping_mask))
-                    # This is impossible since at least i, j is not masked. 
+                    # This is impossible since at least i, j is not masked.
                     assert(remaining_num > 0)
                     correction = clobber_total / remaining_num
 
-                    # It is OK if nothing is masked - the weights will not be changed.  
+                    # It is OK if nothing is masked - the weights will not be changed.
                     if correction == 0:
                         assert(not overlapping_mask.any())
 
-                    # Redistribute to non-masked points. 
+                    # Redistribute to non-masked points.
                     tmp_weights = np.copy(weights)
                     tmp_weights[overlapping_mask] = 0.0
                     tmp_weights[np.where(tmp_weights != 0)] += correction

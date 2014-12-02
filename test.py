@@ -50,11 +50,18 @@ def load_fortran_test_interface():
     return ti.test_interface
 
 
-def run_fortran_gaussian_filter(sigma, truncate, kx, ky, input):
+def run_fortran_gaussian_filter(sigma, truncate, kx, ky, input, mask=None):
 
     ti = load_fortran_test_interface()
-    k, o = ti.run_gaussian_filter(sigma=1.0, truncate=4.0, kx=9, ky=9,
-                                  input=input)
+    if mask is not None:
+        k, o = ti.run_gaussian_filter(sigma=1.0, truncate=4.0, kx=kx, ky=ky,
+                                      nx=input.shape[0], ny=input.shape[1],
+                                      input=input, mask=mask)
+    else:
+        k, o = ti.run_gaussian_filter(sigma=1.0, truncate=4.0, kx=kx, ky=ky,
+                                      nx=input.shape[0], ny=input.shape[1],
+                                      input=input)
+
     return k, o
 
 
@@ -137,6 +144,31 @@ class TestFortranFilter():
         output_p = convolve(input, k_p)
 
         assert((abs(output_p - output_f) < 1e-15).all())
+
+
+    def test_filter_with_mask(self):
+        """
+        Some basic tests with masking.
+        """
+
+        input = np.random.random(size=(100, 100))
+
+        # Lots of mask. Recall 0 is masked.
+        mask = np.ones_like(input)
+        mask[0::2, :] = 0
+        _, output = run_fortran_gaussian_filter(1.0, 4.0, 9, 9, input, mask)
+        assert(abs(1 - np.sum(output) / np.sum(input)) < 1e-3)
+
+        # No mask - all blur.
+        mask = np.ones_like(input)
+        _, output = run_fortran_gaussian_filter(1.0, 4.0, 9, 9, input, mask)
+        assert(abs(1 - np.sum(output) / np.sum(input)) < 1e-12)
+
+        # All mask - does nothing.
+        mask = np.zeros_like(input)
+        _, output = run_fortran_gaussian_filter(1.0, 4.0, 9, 9, input, mask)
+        assert(np.array_equal(input, output))
+
 
 
 class TestPythonFilter():
@@ -232,7 +264,7 @@ class TestPythonFilter():
         result = convolve(input, gaussian_kernel(1), mask)
         assert(abs(1 - np.sum(result) / np.sum(input)) < 1e-3)
 
-        # No mask.
+        # No mask, blur everything.
         mask = np.zeros_like(input, dtype='bool')
         result = convolve(input, gaussian_kernel(1), mask)
         assert(abs(1 - np.sum(result) / np.sum(input)) < 1e-12)
