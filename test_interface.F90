@@ -1,7 +1,8 @@
 
-! Some interface code to test the gaussian_filter from python. gaussian_filter
-! can't be called directly from Python because it has assumed shape arrays. Also
-! f2py needs kind=8 to use double reals. 
+! Some interface code to test the gaussian_filter from python. The
+! gaussian_filter module can't be called directly from Python because it has
+! assumed shape arrays. Also f2py needs kind=8 to use double reals.
+
 module test_interface
 
 use gaussian_filter, only: gaussian_kernel, convolve, tile_and_reflect, assert
@@ -64,9 +65,3 @@ subroutine run_tile_and_reflect(input, x, y, output)
 end subroutine run_tile_and_reflect
 
 end module test_interface
-
-!program test
-
-!   use test_interface, only: run_tile_and_reflect
-
-!end program test

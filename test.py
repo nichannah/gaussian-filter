@@ -353,12 +353,3 @@ class TestPythonFilter():
         k = gaussian_kernel(4, truncate=1)
 
         my_taux = convolve(taux_in, k, mask)
-
-
-    def test_tuning_script(self):
-        """
-        The tuning script will take an example field in and produce a series of
-        plots to help the user decide on a good configuration.
-        """
-
-        pass

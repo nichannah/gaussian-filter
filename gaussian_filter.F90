@@ -14,8 +14,8 @@ public tile_and_reflect
 
 contains
 
-! This is a copy of code found in test/test.py. These two
-! implementations must remain equivalent for tests to pass.
+! This is a copy of code found in gaussian_filter.py. These two implementations
+! must remain equivalent for tests to pass.
 subroutine gaussian_kernel(sigma, kernel, truncate)
 
     real, intent(in) :: sigma
@@ -66,6 +66,7 @@ subroutine tile_and_reflect(input, output)
     rows = ubound(input, 1)
     cols = ubound(input, 2)
 
+    ! Rely on automatic deallocation to clean this up. 
     allocate(output(3*rows, 3*cols))
 
     ! There are 3x3 tiles, we start at the top left and set the tiles up row by
@@ -91,7 +92,7 @@ subroutine tile_and_reflect(input, output)
 
 end subroutine tile_and_reflect
 
-! Convolution. First implement without mask.
+! Convolution.
 subroutine convolve(input, weights, output, mask)
 
     real, intent(in), dimension(:,:) :: input, weights
