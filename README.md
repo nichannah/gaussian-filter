@@ -6,7 +6,7 @@ Edges are treated using reflection. The input can be masked.
 
 This code is being used to smooth out the 'blockiness' which can be seen when doing conservative interpolation of data from a coarse to fine grids.
 
-Masking is handled in the following way:
+Masking is intended to be conservative and is handled in the following way:
 
 * Masked points are skipped in the convolution, their value will be unchanged.
 * Input points which are masked have weight 0 in the kernel. i.e. the kernel is effectively masked.
