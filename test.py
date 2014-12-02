@@ -53,14 +53,17 @@ def load_fortran_test_interface():
 def run_fortran_gaussian_filter(sigma, truncate, kx, ky, input, mask=None):
 
     ti = load_fortran_test_interface()
-    if mask is not None:
-        k, o = ti.run_gaussian_filter(sigma=1.0, truncate=4.0, kx=kx, ky=ky,
-                                      nx=input.shape[0], ny=input.shape[1],
-                                      input=input, mask=mask)
+
+    if mask is None:
+        has_mask = False
+        mask = np.ones_like(input)
     else:
-        k, o = ti.run_gaussian_filter(sigma=1.0, truncate=4.0, kx=kx, ky=ky,
-                                      nx=input.shape[0], ny=input.shape[1],
-                                      input=input)
+        has_mask = True
+
+    k, o = ti.run_gaussian_filter(sigma=sigma, truncate=truncate,
+                                  kx=kx, ky=ky,
+                                  nx=input.shape[0], ny=input.shape[1],
+                                  input=input, mask=mask, has_mask=has_mask)
 
     return k, o
 
@@ -168,6 +171,60 @@ class TestFortranFilter():
         mask = np.zeros_like(input)
         _, output = run_fortran_gaussian_filter(1.0, 4.0, 9, 9, input, mask)
         assert(np.array_equal(input, output))
+
+
+    def test_compare_with_mask(self):
+        """
+        Compare output between Python and Fortran implementations with masking.
+        """
+
+        with nc.Dataset(os.path.join(self.data_dir, 'taux.nc')) as f:
+            taux_in = f.variables['taux'][0, :]
+
+        mask_py = np.zeros_like(taux_in, dtype='bool')
+        mask_py[np.where(taux_in == 0)] = True
+
+        mask_f = np.ones_like(taux_in)
+        mask_f[np.where(taux_in == 0)] = 0.0
+
+        # Run the scipy version.
+        taux_sc = ndimage.gaussian_filter(taux_in, sigma=4.0, truncate=1.0)
+        # To do a realistic comparison we need to mask out land points.
+        taux_sc = taux_sc * np.logical_not(mask_py)
+
+        # A lower truncation leads to a smaller kernel and hence less guessing
+        # in the case of a masked input. This gives a better result for masked
+        # inputs.
+        k = gaussian_kernel(4.0, truncate=1.0)
+        # Run the Python version.
+        taux_py = convolve(taux_in, k, mask_py)
+
+        # Run the Fortran version.
+        _, taux_f = run_fortran_gaussian_filter(4.0, 1.0, 9, 9, taux_in, mask_f)
+
+        assert(abs(1 - np.sum(taux_in) / np.sum(taux_f)) < 1e-5)
+        assert(abs(1 - np.sum(taux_in) / np.sum(taux_py)) < 1e-4)
+
+
+    def test_compare_without_mask(self):
+        """
+        Compare output between Python and Fortran implementations no masking.
+        """
+
+        with nc.Dataset(os.path.join(self.data_dir, 'taux.nc')) as f:
+            taux_in = f.variables['taux'][0, :]
+
+        # Scipy
+        taux_sc = ndimage.gaussian_filter(taux_in, sigma=4.0, truncate=1.0)
+
+        # Run the Python version.
+        k = gaussian_kernel(4.0, truncate=1.0)
+        taux_py = convolve(taux_in, k)
+
+        _, taux_f = run_fortran_gaussian_filter(4.0, 1.0, 9, 9, taux_in)
+
+        import pdb
+        pdb.set_trace()
 
 
 

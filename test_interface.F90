@@ -15,7 +15,7 @@ public run_gaussian_filter, run_tile_and_reflect
 contains
 
 subroutine run_gaussian_filter(sigma, truncate, kx, ky, kernel, &
-                               nx, ny, input, output, mask)
+                               nx, ny, input, output, mask, has_mask)
 
     real(kind=8), intent(in) :: sigma, truncate
     ! Indices and output for kernel
@@ -25,8 +25,10 @@ subroutine run_gaussian_filter(sigma, truncate, kx, ky, kernel, &
     ! Indices and data input/output
     integer, intent(in) :: nx, ny
     real(kind=8), intent(in), dimension(nx, ny) :: input
-    real(kind=8), intent(in), dimension(nx, ny), optional :: mask
     real(kind=8), intent(out), dimension(nx, ny) :: output
+    real(kind=8), intent(in), dimension(nx, ny) :: mask
+    ! Since f2py does not support optional arguments.
+    logical, intent(in) :: has_mask
 
     ! Get the kernel first.
     real, allocatable, dimension(:,:) :: k
@@ -37,7 +39,7 @@ subroutine run_gaussian_filter(sigma, truncate, kx, ky, kernel, &
 
     kernel(:, :) = k(:, :)
 
-    if (present(mask)) then
+    if (has_mask) then
         call convolve(input, kernel, output, mask)
     else
         call convolve(input, kernel, output)
