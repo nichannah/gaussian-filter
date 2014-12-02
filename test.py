@@ -179,7 +179,7 @@ class TestFortranFilter():
         """
 
         with nc.Dataset(os.path.join(self.data_dir, 'taux.nc')) as f:
-            taux_in = f.variables['taux'][0, :]
+            taux_in = np.array(f.variables['taux'][0, :], dtype='float64')
 
         mask_py = np.zeros_like(taux_in, dtype='bool')
         mask_py[np.where(taux_in == 0)] = True
@@ -202,8 +202,8 @@ class TestFortranFilter():
         # Run the Fortran version.
         _, taux_f = run_fortran_gaussian_filter(4.0, 1.0, 9, 9, taux_in, mask_f)
 
-        assert(abs(1 - np.sum(taux_in) / np.sum(taux_f)) < 1e-5)
-        assert(abs(1 - np.sum(taux_in) / np.sum(taux_py)) < 1e-4)
+        assert(np.max(abs(taux_py - taux_f)) < 1e-14)
+        assert(abs(1 - np.sum(taux_in) / np.sum(taux_f)) < 1e-4)
 
 
     def test_compare_without_mask(self):
@@ -212,7 +212,7 @@ class TestFortranFilter():
         """
 
         with nc.Dataset(os.path.join(self.data_dir, 'taux.nc')) as f:
-            taux_in = f.variables['taux'][0, :]
+            taux_in = np.array(f.variables['taux'][0, :], dtype='float64')
 
         # Scipy
         taux_sc = ndimage.gaussian_filter(taux_in, sigma=4.0, truncate=1.0)
@@ -223,9 +223,9 @@ class TestFortranFilter():
 
         _, taux_f = run_fortran_gaussian_filter(4.0, 1.0, 9, 9, taux_in)
 
-        import pdb
-        pdb.set_trace()
-
+        # Check that all implementations are (very) close.
+        assert(np.max(abs(taux_sc - taux_py)) < 1e-14)
+        assert(np.max(abs(taux_sc - taux_py)) < 1e-14)
 
 
 class TestPythonFilter():
