@@ -28,10 +28,10 @@ How to Use
 Put gaussian_kernel.F90 into your project.
 
 > use gaussian_filter, only: gaussian_kernel, convolve
-> ...
+
 > real, dimension(:, :), allocatable :: kernel
 > real, dimension(x, y) :: input, output
-> ...
+
 > call gaussian_kernel(sigma, kernel, truncate)
 > call convolve(input, kernel, output)
 
