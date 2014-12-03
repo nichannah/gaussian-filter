@@ -35,9 +35,8 @@ real, dimension(:, :), allocatable :: kernel
 real, dimension(x, y) :: input, output
 
 call gaussian_kernel(sigma, kernel, truncate)
-call convolve(input, kernel, output)
+call convolve(input, kernel, output, mask)
 ```
-
 
 How to Update
 -------------
@@ -45,4 +44,13 @@ How to Update
 * Make chages to gaussian_kernel.py, add tests to test.py
 * Make equivalent changes to gaussian_kernel.F90
 * Ensure that the two implementations produce (almost) identical results.
+
+Example Output
+--------------
+
+![alt tag](https://raw.github.com/nicholash/gaussian-filter/master/test_data/berfore_and_after.png)
+
+
+
+
 
