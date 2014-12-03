@@ -4,7 +4,7 @@ Gaussian filter/blur in Fortran and Python.
 
 Edges are treated using reflection. The input can be masked.
 
-This code is being used to smooth out the 'blockiness' which can be seen when doing conservative interpolation of data from a coarse to fine grids.
+This code is being used to smooth out the 'blockiness' which can be seen when doing conservative interpolation of data from coarse to fine grids.
 
 Masking is intended to be conservative and is handled in the following way:
 
@@ -21,7 +21,7 @@ How to Run the tests
 
 > nosetests -s
 
-Tests are run periodically at: https://climate-cms.nci.org.au/jenkins/job/nah599/job/gaussian-filter/
+Tests are being run periodically at: https://climate-cms.nci.org.au/jenkins/job/nah599/job/gaussian-filter/
 
 How to Use
 -----------
