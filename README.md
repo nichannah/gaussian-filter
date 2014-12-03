@@ -44,6 +44,7 @@ How to Update
 * Make chages to gaussian_kernel.py, add tests to test.py
 * Make equivalent changes to gaussian_kernel.F90
 * Ensure that the two implementations produce (almost) identical results.
+* Consider sending a pull request to add your improvements to this repository.
 
 Example Output
 --------------
