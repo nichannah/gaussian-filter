@@ -48,7 +48,7 @@ How to Update
 Example Output
 --------------
 
-![alt tag](https://github.com/nicholash/gaussian-filter/master/test_data/before_and_after.png)
+![Before and after: shortwave from low to high resolution grid](https://raw.github.com/nicholash/gaussian-filter/master/test_data/before_and_after.png)
 
 
 
