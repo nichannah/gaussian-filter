@@ -48,7 +48,7 @@ How to Update
 Example Output
 --------------
 
-![](https://github.com/nicholash/gaussian-filter/master/test_data/before_and_after.png)
+![alt tag](https://github.com/nicholash/gaussian-filter/master/test_data/before_and_after.png)
 
 
 
