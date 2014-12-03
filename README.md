@@ -50,7 +50,9 @@ Example Output
 
 ![Before and after: shortwave from low to high resolution grid](https://raw.github.com/nicholash/gaussian-filter/master/test_data/before_and_after.png)
 
+In this example a shortwave flux from a coarse atmosphere model grid was looking very blocky on the higher resolution ice/ocean grid. This blockiness can cause undesirable artefacts in the ocean outputs. The smoothing has reduced the blockiness. It has introduced a couple of other 'interesting' features:
 
-
+* Notice the vertical lines, or strips. This pattern corrosponds to the processor tiling, each strip is an individual processor. Since it would be expensive for procs to communicate, each one just smoothes the data that it has available.
+* Notice that around land boundaries the smoothing is chunky. This is due to the masking approach which ignores masked areas but increases the weights of nearby non-masked areas (to try to maintain conservation, see explanation of masking above). This probably needs further work.
 
 
